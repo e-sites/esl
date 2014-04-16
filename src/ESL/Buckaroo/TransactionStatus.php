@@ -5,7 +5,7 @@
  * Created with the details sent to us by Buckaroo
  *
  * @package Buckaroo
- * @version $Id: TransactionStatus.php 684 2014-04-16 08:39:18Z fpruis $
+ * @version $Id: TransactionStatus.php 661 2014-02-14 13:44:44Z fpruis $
  */
 class ESL_Buckaroo_TransactionStatus
 {
@@ -107,9 +107,6 @@ class ESL_Buckaroo_TransactionStatus
 			case 690:
 				return ESL_Buckaroo::STATUS_REJECT;
 				break;
-
-			case 792:
-				return ESL_Buckaroo::STATUS_WAITING;
 		}
 
 		// Status unknown
@@ -154,16 +151,6 @@ class ESL_Buckaroo_TransactionStatus
 	public function isRejected()
 	{
 		return ($this->getStatus() == ESL_Buckaroo::STATUS_REJECT);
-	}
-
-	/**
-	 * Returns whether transaction is waiting for user input
-	 *
-	 * @return bool
-	 */
-	public function isWaiting()
-	{
-		return ($this->getStatus() == ESL_Buckaroo::STATUS_WAITING);
 	}
 }
 ?>

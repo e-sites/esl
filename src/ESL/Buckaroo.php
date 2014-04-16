@@ -6,7 +6,7 @@
  * ESL_Buckaroo_CallbackInterface has to be provided which will be called to process payments.
  *
  * @package Buckaroo
- * @version $Id: Buckaroo.php 684 2014-04-16 08:39:18Z fpruis $
+ * @version $Id: Buckaroo.php 681 2014-03-31 08:19:12Z fpruis $
  */
 class ESL_Buckaroo
 {
@@ -30,7 +30,6 @@ class ESL_Buckaroo
 	const STATUS_CANCEL  = 'cancel';
 	const STATUS_ERROR   = 'error';
 	const STATUS_REJECT  = 'reject';
-	const STATUS_WAITING = 'waiting';
 
 	/**
 	 * Name of querystring variable that is set with a status when customer is redirected back to us. Only used when no custom url is provided in ESL_Buckaroo_ReturnUrl
@@ -41,28 +40,28 @@ class ESL_Buckaroo
 
 	/**
 	 * Configuration of merchant key, locale, etcetera.
-	 * 
+	 *
 	 * @var ESL_Buckaroo_Config
 	 */
 	protected $oConfig;
 
 	/**
 	 * Userland object to process transaction statusses
-	 * 
+	 *
 	 * @var ESL_Buckaroo_CallbackInterface
 	 */
 	protected $oCallbacks;
 
 	/**
 	 * Buckaroo gateway used to communicate
-	 * 
+	 *
 	 * @var ESL_Buckaroo_Gateway
 	 */
 	protected $oGateway;
 
 	/**
 	 * Available payment methods
-	 * 
+	 *
 	 * @var ESL_Buckaroo_Service[]
 	 */
 	protected $aServices;
@@ -74,7 +73,7 @@ class ESL_Buckaroo
 
 	/**
 	 * Provide an ESL_Buckaroo_Config instance with your settings, and an ESL_Buckaroo_CallbackInterface implementing class that will be called to process updates
-	 * 
+	 *
 	 * @param ESL_Buckaroo_Config $oConfig Configuration
 	 * @param ESL_Buckaroo_CallbackInterface $oCallbacks
 	 */
@@ -181,9 +180,9 @@ class ESL_Buckaroo
 	 * Return one of the available services, to be used with ESL_Buckaroo_Payment.
 	 *
 	 * Use getPayServices() and/or a ESL_Buckaroo::SERVICE_* constant
-	 * 
+	 *
 	 * @throws InvalidArgumentException On non-available service
-	 * 
+	 *
 	 * @param string $sService
 	 * @return ESL_Buckaroo_Service
 	 */
@@ -200,7 +199,7 @@ class ESL_Buckaroo
 	 * Create a new transaction with Buckaroo and return the URL where the customer should be send to complete payment
 	 *
 	 * This method will return a URL where the end-user should be redirected and where the payment can be completed
-	 * 
+	 *
 	 * @throws RuntimeException
 	 *
 	 * @param ESL_Buckaroo_Payment $oPaymentInfo
@@ -236,8 +235,7 @@ class ESL_Buckaroo
 			// It's either finished (success), or an error. In either case redirect customer to our own site, to the url we have provided ourselves
 			switch (strtolower($aResponse['brq_apiresult'])) {
 				case 'success':
-				case 'waiting':
-					$sReturnUrl = empty($aResponse['brq_return'])?$oReturnUrl->getUrlSuccess():$aResponse['brq_return']; // Same as $oReturnUrl->getUrlSuccess()
+					$sReturnUrl = $aResponse['brq_return']; // Same as $oReturnUrl->getUrlSuccess()
 					break;
 				case 'cancel':
 					$sReturnUrl = $aResponse['brq_returncancel']; // Same as $oReturnUrl->getUrlCancel()
@@ -281,7 +279,7 @@ class ESL_Buckaroo
 	 * This form is called a push message, and this method processes the contents
 	 *
 	 * In most cases you call this method with the entire $_POST superglobal as argument on the page you redirect customers to.
-	 * 
+	 *
 	 * @throws RuntimeException
 	 *
 	 * @param array $aPushmessage
@@ -329,8 +327,8 @@ class ESL_Buckaroo
 		/*
 		 * If there is a transaction group, fetch the status for the group and use that instead of the original status.
 		 * This happens if a user started paying with a "limited funds" payment method, eg. giftcard, and then had to do
-		 * another payment to complete the payment. (eg â‚¬20 order, â‚¬5 giftcard and â‚¬15 iDEAL payment).
-		 * Note that this second payment can, again, be a limited funds payment. (â‚¬20 order can be payed by using 4 â‚¬5 giftcards)
+		 * another payment to complete the payment. (eg €20 order, €5 giftcard and €15 iDEAL payment).
+		 * Note that this second payment can, again, be a limited funds payment. (€20 order can be payed by using 4 €5 giftcards)
 		 */
 		if (!empty($aPushmessage['brq_relatedtransaction_partialpayment'])) {
 			$sGroupTransaction = $aPushmessage['brq_relatedtransaction_partialpayment'];
@@ -367,7 +365,7 @@ class ESL_Buckaroo
 	{
 		$oRequest = new ESL_Buckaroo_Request_TransactionStatus($sTransactionKey);
 		$aResponse = $this->getGateway()->transactionStatus($oRequest);
-		
+
 		if (empty($aResponse['brq_transactions'])) {
 			throw new RuntimeException("No transaction key in response.");
 		}
@@ -378,8 +376,8 @@ class ESL_Buckaroo
 		/*
 		 * If there is a transaction group, fetch the status for the group and use that instead of the original status.
 		 * This happens if a user started paying with a "limited funds" payment method, eg. giftcard, and then had to do
-		 * another payment to complete the payment. (eg â‚¬20 order, â‚¬5 giftcard and â‚¬15 iDEAL payment).
-		 * Note that this second payment can, again, be a limited funds payment. (â‚¬20 order can be payed by using 4 â‚¬5 giftcards.)
+		 * another payment to complete the payment. (eg €20 order, €5 giftcard and €15 iDEAL payment).
+		 * Note that this second payment can, again, be a limited funds payment. (€20 order can be payed by using 4 €5 giftcards.)
 		 */
 		if (!empty($aResponse['brq_relatedtransaction_partialpayment'])) {
 			$oGroupRequest = new ESL_Buckaroo_Request_TransactionStatus($aResponse['brq_relatedtransaction_partialpayment']);
@@ -390,7 +388,7 @@ class ESL_Buckaroo
 			$aResponse['brq_statuscode'] = $aGroupResponse['brq_statuscode'];
 		}
 
-		$oStatus = ESL_Buckaroo_TransactionStatusFactory::createTransactionStatus($aResponse);
+		$oStatus = new ESL_Buckaroo_TransactionStatus($aResponse['brq_transactions'], $aResponse['brq_statuscode']);
 		$this->handleTransactionStatus($oStatus);
 
 		return $oStatus;
@@ -421,7 +419,7 @@ class ESL_Buckaroo
 	 * The Buckaroo gateway to communicate with
 	 *
 	 * In this case the NVP gateway
-	 * 
+	 *
 	 * @return ESL_Buckaroo_Gateway
 	 */
 	protected function getGateway()
@@ -434,7 +432,7 @@ class ESL_Buckaroo
 
 	/**
 	 * The configuration as provided during instantiation
-	 * 
+	 *
 	 * @return ESL_Buckaroo_Config
 	 */
 	protected function getConfig()
