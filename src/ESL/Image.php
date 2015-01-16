@@ -18,7 +18,7 @@
  * @todo Move operations, like thumbnail, extend, border, into seperate classes. Minimizes this class and allows extending with custom operators
  *
  * @package Image
- * @version $Id: Image.php 661 2014-02-14 13:44:44Z fpruis $
+ * @version $Id: Image.php 770 2014-08-28 06:50:26Z fpruis $
  */
 final class ESL_Image
 {
@@ -293,7 +293,7 @@ final class ESL_Image
 		} else {
 			// Try with imagemagick instead
 			$aOutput = $iExitcode = null;
-			$sIdentify = exec("identify -quiet -ping -format '%w %h' " . escapeshellarg($sPathFqn), $aOutput, $iExitcode);
+			$sIdentify = exec("identify -quiet -ping -format '%w %h' " . escapeshellarg($sPathFqn . '[0]'), $aOutput, $iExitcode);
 			// Test and assign output to $iWidth & $iHeight
 			if ($iExitcode !== 0 || sscanf($sIdentify, '%d %d', $iWidth, $iHeight) != 2) {
 				// imagemagick failed too
@@ -370,17 +370,35 @@ final class ESL_Image
 		$iOutputWidth = round($this->generateOutputWidth() * $this->fDensity);
 		$iOutputHeight = round($this->generateOutputHeight() * $this->fDensity);
 
-		$aArgumentsInput = array();
+		$aArgumentsInput = array(
+			'-auto-orient'
+		);
 		$aArgumentsOutput = array(
 			'-colorspace sRGB',
 			'-quality 85'
 		);
 
-		if ($this->getExtension() == 'gif') {
-			$aArgumentsOutput[] = '-coalesce';
+		switch ($this->getExtension()) {
+			case 'gif':
+				$aArgumentsOutput[] = '-coalesce';
+				break;
+
+			case 'pdf':
+			case 'psd':
+				// Take first page/frame instead of handling each as seperate input
+				$sFileInput = $sFileInput . '[0]';
+				// no break; intended to do the svg and png rules too
+
+			case 'svg':
+				$aArgumentsInput[] = '-density 300';
+				// no break; intended to do the png rule too
+
+			case 'png':
+				$this->bDoBackgroundColor = true;
+				break;
 		}
 
-		if ($this->bDoBackgroundColor || $this->getExtension() == 'png') {
+		if ($this->bDoBackgroundColor) {
 			$aArgumentsOutput[] = sprintf('-background %s', escapeshellarg($this->sBackgroundColor));
 		}
 
@@ -458,7 +476,10 @@ final class ESL_Image
 			$aArgumentsOutput[] = sprintf('-compose Over -background %s', escapeshellarg($this->sBackgroundColor));
 		}
 
-		$aArgumentsOutput[] = '-flatten';
+		if ($this->getExtension() != 'gif') {
+			// Do not flatten gif. It would break animated gifs
+			$aArgumentsOutput[] = '-flatten';
+		}
 
 		// Aplly mask to have transparency in masked areas, instead of background color
 		if ($this->bDoMask) {
@@ -475,7 +496,7 @@ final class ESL_Image
 		$aArgumentsOutput[] = escapeshellarg($sFileOutput);
 
 		// Build command
-		return 'nice ' . static::PATH_CONVERT . ' -quiet ' . implode(' ', $aArgumentsInput) . ' ' . implode(' ', $aArgumentsOutput);
+		return static::PATH_CONVERT . ' -quiet ' . implode(' ', $aArgumentsInput) . ' ' . implode(' ', $aArgumentsOutput);
 	}
 
 	/**
@@ -561,19 +582,22 @@ final class ESL_Image
 	 */
 	protected function generateOutputExtension()
 	{
-		if ($this->bDoBackgroundColor && $this->sBackgroundColor == 'none') {
-			// Enforce png
-			$sExtension = 'png';
-		} elseif ($this->bDoMask) {
-			// Enforce png
-			$sExtension = 'png';
-		} elseif (($sOriginalExtension = $this->getExtension())) {
-			// Preserve input extension, for example 'png' or 'gif'
-			$sExtension = $sOriginalExtension;
-		} else {
-			$sExtension = 'jpg';
-		}
+		switch (true) {
+			case ($this->bDoBackgroundColor && $this->sBackgroundColor == 'none'):
+			case ($this->bDoMask):
+			case ($this->getExtension() == 'png'):
+			case ($this->getExtension() == 'pdf'):
+			case ($this->getExtension() == 'svg'):
+				$sExtension = 'png';
+				break;
 
+			case ($this->getExtension() == 'gif'):
+				$sExtension = 'gif';
+				break;
+
+			default:
+				$sExtension = 'jpg';
+		}
 		return $sExtension;
 	}
 
@@ -702,9 +726,9 @@ final class ESL_Image
 
 			// Execute
 			$aOutput = $iExitcode = null;
-			exec($sCmdConvert, $aOutput, $iExitcode);
+			exec('nice ' . $sCmdConvert . ' 2>&1 >/dev/null', $aOutput, $iExitcode);
 			if ($iExitcode !== 0) {
-				throw new Exception("Command '$sCmdConvert' failed.", 0, new RuntimeException("Could not create thumbnail."));
+				throw new RuntimeException(implode("\n", $aOutput), $iExitcode, new RuntimeException("Command '$sCmdConvert' failed."));
 			}
 
 			// Optimise
@@ -1103,6 +1127,7 @@ final class ESL_Image
 		static::assertColor($sColor);
 
 		$this->sBackgroundColor = $sColor;
+		//$this->bDoBackgroundColor = true;
 
 		return $this;
 	}

@@ -9,10 +9,14 @@
  * You can enable/disable services in your Buckaroo account
  *
  * @package Buckaroo
- * @version $Id: Service.php 661 2014-02-14 13:44:44Z fpruis $
+ * @version $Id: Service.php 767 2014-08-20 06:20:50Z fpruis $
  */
 class ESL_Buckaroo_Service
 {
+	const ACTION_PAY = 'Pay';
+	const ACTION_PAYRECURRENT = 'PayRecurrent';
+	const ACTION_SUBSCRIBE = 'Subscribe';
+
 	/**
 	 *
 	 * @var string
@@ -32,16 +36,18 @@ class ESL_Buckaroo_Service
 	protected $sVersion;
 
 	/**
+	 * List of actions supported by the service.
 	 *
-	 * @var ESL_Buckaroo_Service_Field[]
+	 * @var ESL_Buckaroo_Service_Action[]
 	 */
-	protected $aPayFields;
+	protected $aSupportedActions = array();
 
 	/**
 	 * Return ESL_Buckaroo_Service or ESL_Buckaroo_Service_Ideal for the given data structure
 	 *
 	 * @param array $aServiceMap
 	 * @return ESL_Buckaroo_Service
+	 * @throws InvalidArgumentException
 	 */
 	static public function factory(array $aServiceMap)
 	{
@@ -67,20 +73,9 @@ class ESL_Buckaroo_Service
 		$this->sLabel = $aServiceMap['description'];
 		$this->sVersion = $aServiceMap['version'];
 
-		$this->aPayFields = array();
+		$this->aSupportedActions = array();
 		foreach ($aServiceMap['actiondescription'] as $aActionMap) {
-			if ($aActionMap['name'] != 'Pay') {
-				continue;
-			}
-
-			if (isset($aActionMap['requestparameters'])) {
-				foreach ($aActionMap['requestparameters'] as $aParameterMap) {
-					$oField = new ESL_Buckaroo_Service_Field($aParameterMap);
-					$this->aPayFields[$oField->getId()] = $oField;
-				}
-			}
-			// Stop after we found the Pay-action
-			break;
+			$this->aSupportedActions[$aActionMap['name']] = new ESL_Buckaroo_Service_Action($this, $aActionMap);
 		}
 	}
 
@@ -118,29 +113,57 @@ class ESL_Buckaroo_Service
 	}
 
 	/**
-	 * Return the fields that could be preset for this service.
-	 * 
+	 * Return the fields that could be preset for the pay action of this service.
+	 * Shorthand for getAction('Pay')->getFields()
+	 *
 	 * @return ESL_Buckaroo_Service_Field[]
 	 */
 	public function getFields()
 	{
-		return $this->aPayFields;
+		return $this->getAction(static::ACTION_PAY)->getFields();
 	}
 
 	/**
-	 * Return a specific field
-	 * 
+	 * Return a specific field of the pay action of this service.
+	 * Shorthand for getAction('Pay')->getField($sField)
+	 *
+	 * @param string $sField The ID of the field that should be returned.
+	 *
 	 * @throws InvalidArgumentException On invalid Field
-	 * 
+	 *
 	 * @return ESL_Buckaroo_Service_Field
 	 */
 	public function getField($sField)
 	{
-		$aFields = $this->getFields();
-		if (!isset($aFields[$sField])) {
-			throw new InvalidArgumentException("Field '$sField' does not exist in service.");
+		return $this->getAction(static::ACTION_PAY)->getField($sField);
+	}
+
+	/**
+	 * Does this service support a specific action?
+	 *
+	 * @param string $sActionName The name of the action for which you want to know if it is supported, eg ESL_Buckaroo_Status::ACTION_PAY
+	 *
+	 * @return bool
+	 */
+	public function supportsAction($sActionName)
+	{
+		return isset($this->aSupportedActions[$sActionName]);
+	}
+
+	/**
+	 * Get a specific action.
+	 *
+	 * @param $sActionName
+	 * @return ESL_Buckaroo_Service_Action
+	 * @throws InvalidArgumentException
+	 */
+	public function getAction($sActionName)
+	{
+		if (!$this->supportsAction($sActionName)) {
+			throw new InvalidArgumentException("Action '$sActionName' is not supported by service.");
 		}
-		return $aFields[$sField];
+
+		return $this->aSupportedActions[$sActionName];
 	}
 }
 ?>

@@ -5,7 +5,7 @@
  * Build your instance and use it with ESL_Services_Mailplus::subscribe()
  *
  * @package Mailplus
- * @version $Id: Subscribe.php 662 2014-02-14 14:17:32Z fpruis $
+ * @version $Id: Subscribe.php 702 2014-05-12 12:11:17Z fpruis $
  */
 class ESL_Services_Mailplus_Requests_Subscribe implements ESL_Services_Mailplus_Requests_Interface
 {
@@ -121,6 +121,38 @@ class ESL_Services_Mailplus_Requests_Subscribe implements ESL_Services_Mailplus_
 		}
 
 		return $aArray;
+	}
+
+	/**
+	 *
+	 * @param string $sName
+	 */
+	public function setFirstname($sName)
+	{
+		$this->addKeyValuePair('firstName', $sName);
+	}
+
+	/**
+	 *
+	 * @param string $sName
+	 */
+	public function setLastname($sName)
+	{
+		$this->addKeyValuePair('lastName', $sName);
+	}
+
+	/**
+	 *
+	 * @throws InvalidArgumentException
+	 * 
+	 * @param string Either 'M' for male or 'F' for female.
+	 */
+	public function setGender($sGender)
+	{
+		if (!in_array($sGender, array('M', 'F'))) {
+			throw new InvalidArgumentException("Gender is required to be either 'M' or 'F'");
+		}
+		$this->addKeyValuePair('gender', $sGender);
 	}
 
 	/**

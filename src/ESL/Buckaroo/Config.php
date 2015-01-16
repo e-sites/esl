@@ -5,7 +5,7 @@
  * Contains information required to work with Buckaroo
  * 
  * @package Buckaroo
- * @version $Id: Config.php 661 2014-02-14 13:44:44Z fpruis $
+ * @version $Id: Config.php 793 2014-09-19 14:43:20Z fpruis $
  */
 class ESL_Buckaroo_Config
 {
@@ -15,6 +15,10 @@ class ESL_Buckaroo_Config
 	const LOCALE_NL = 'nl-NL'; // Dutch - The Netherlands
 	const LOCALE_EN = 'en-US'; // English - United Kingdom
 	const LOCALE_DE = 'de-DE'; // German - Germany
+	const LOCALE_FR = 'fr-FR'; // French - France
+
+	const CHANNEL_WEB = 'web';
+	const CHANNEL_BACKOFFICE = 'backoffice';
 
 	/**
 	 * Merchant ID
@@ -44,6 +48,12 @@ class ESL_Buckaroo_Config
 	protected $sLocale;
 
 	/**
+	 *
+	 * @var string
+	 */
+	protected $sChannel;
+
+	/**
 	 * @param string $sMerchantKey Merchant ID
 	 * @param string $sSecretKey Secret key
 	 * @param bool $bIsInTest
@@ -64,6 +74,7 @@ class ESL_Buckaroo_Config
 		$this->bIsInTest = $bIsInTest;
 
 		$this->sLocale = static::LOCALE_NL;
+		$this->sChannel = static::CHANNEL_WEB;
 	}
 
 	/**
@@ -102,12 +113,12 @@ class ESL_Buckaroo_Config
 	 * Set the locale to use when fetching texts
 	 *
 	 * Language for payment method labels and date and number formatting
-	 * 
+	 *
 	 * @param string $sLocale ISO culture code
 	 */
 	public function setLocale($sLocale)
 	{
-		if (!in_array($sLocale, array(static::LOCALE_NL, static::LOCALE_EN, static::LOCALE_DE))) {
+		if (!in_array($sLocale, array(static::LOCALE_NL, static::LOCALE_EN, static::LOCALE_DE, static::LOCALE_FR))) {
 			throw new InvalidArgumentException("Given locale is not supported by Buckaroo. Use one of the LOCALE-constants");
 		}
 		$this->sLocale = $sLocale;
@@ -120,6 +131,26 @@ class ESL_Buckaroo_Config
 	public function getLocale()
 	{
 		return $this->sLocale;
+	}
+
+	/**
+	 * @param string $sLocale ISO culture code
+	 */
+	public function setChannel($sChannel)
+	{
+		if (!in_array($sChannel, array(static::CHANNEL_WEB, static::CHANNEL_BACKOFFICE))) {
+			throw new InvalidArgumentException("Given channel is not supported by Buckaroo. Use one of the CHANNEL-constants");
+		}
+		$this->sChannel = $sChannel;
+	}
+
+	/**
+	 *
+	 * @return string
+	 */
+	public function getChannel()
+	{
+		return $this->sChannel;
 	}
 }
 ?>

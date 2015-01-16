@@ -7,7 +7,7 @@
  * Note the amount can not be zero (or less)
  *
  * @package Buckaroo
- * @version $Id: Payment.php 661 2014-02-14 13:44:44Z fpruis $
+ * @version $Id: Payment.php 761 2014-08-13 14:34:56Z fpruis $
  */
 class ESL_Buckaroo_Payment
 {
@@ -52,6 +52,13 @@ class ESL_Buckaroo_Payment
 	 * @var string $sDescription
 	 */
 	protected $sDescription = '';
+
+	/**
+	 * Is this the start of a series of recurrent payments?
+	 *
+	 * @var bool
+	 */
+	protected $bIsStartOfRecurrent;
 
 	/**
 	 *
@@ -195,5 +202,23 @@ class ESL_Buckaroo_Payment
 	{
 		return $this->aCustomFields;
 	}
+
+	/**
+	 * @param boolean $bIsStartOfRecurrent
+	 */
+	public function setIsStartOfRecurrent($bIsStartOfRecurrent)
+	{
+		$this->bIsStartOfRecurrent = $bIsStartOfRecurrent;
+	}
+
+	/**
+	 * @return boolean
+	 */
+	public function getIsStartOfRecurrent()
+	{
+		return $this->bIsStartOfRecurrent;
+	}
+
+
 }
 ?>

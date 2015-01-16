@@ -13,17 +13,26 @@ class ESL_Buckaroo_TransactionStatusFactory
 	 */
 	public static function createTransactionStatus(array $aResponse)
 	{
-		switch ($aResponse['btq_transaction_method']) {
-			case 'transfer':
-				$oStatus = new ESL_Buckaroo_TransferTransactionStatus(
-					$aResponse['brq_transactions'],
-					$aResponse['brq_statuscode'],
-					$aResponse['brq_service_transfer_iban'],
-					$aResponse['brq_service_transfer_paymentreference']);
-				break;
+		if (empty($aResponse['brq_transaction_method']) || empty($aResponse['brq_service_transfer_iban'])) {
+			$oStatus = new ESL_Buckaroo_TransactionStatus($aResponse['brq_transactions'], $aResponse['brq_statuscode']);
+		} else {
+			switch ($aResponse['brq_transaction_method']) {
+				case 'transfer':
+					$oStatus = new ESL_Buckaroo_TransferTransactionStatus(
+						$aResponse['brq_transactions'],
+						$aResponse['brq_statuscode'],
+						$aResponse['brq_service_transfer_iban'],
+						$aResponse['brq_service_transfer_paymentreference']
+					);
+					break;
 
-			default:
-				$oStatus = new ESL_Buckaroo_TransactionStatus($aResponse['brq_transactions'], $aResponse['brq_statuscode']);
+				default:
+					$oStatus = new ESL_Buckaroo_TransactionStatus($aResponse['brq_transactions'], $aResponse['brq_statuscode']);
+			}
+		}
+
+		if (isset($aResponse['brq_recurring']) && $aResponse['brq_recurring'] == 'True') {
+			$oStatus->markAsRecurrent();
 		}
 
 		return $oStatus;

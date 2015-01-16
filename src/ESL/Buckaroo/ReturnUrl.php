@@ -6,7 +6,7 @@
  * With the appropriate setters one or more url's can be customized into something else
  *
  * @package Buckaroo
- * @version $Id: ReturnUrl.php 661 2014-02-14 13:44:44Z fpruis $
+ * @version $Id: ReturnUrl.php 689 2014-04-17 11:37:08Z fpruis $
  */
 class ESL_Buckaroo_ReturnUrl
 {
@@ -34,6 +34,13 @@ class ESL_Buckaroo_ReturnUrl
 	 */
 	protected $sUrlReject;
 
+
+	/**
+	 *
+	 * @var string
+	 */
+	protected $sUrlWaiting;
+
 	/**
 	 *
 	 * @throws InvalidArgumentException
@@ -54,6 +61,10 @@ class ESL_Buckaroo_ReturnUrl
 			$this->setUrlCancel($sBaseUrl . '?' . ESL_Buckaroo::QUERYSTRING_PUSHMESSAGE . '=' . urlencode(ESL_Buckaroo::STATUS_CANCEL));
 			$this->setUrlError($sBaseUrl . '?' . ESL_Buckaroo::QUERYSTRING_PUSHMESSAGE . '=' . urlencode(ESL_Buckaroo::STATUS_ERROR));
 			$this->setUrlReject($sBaseUrl . '?' . ESL_Buckaroo::QUERYSTRING_PUSHMESSAGE . '=' . urlencode(ESL_Buckaroo::STATUS_REJECT));
+			
+			// By default, the waiting-page is the same as the succespage. If for example you want to display payment-details for a backtransfer
+			// you could use a custom waiting page. But you could also have buckaroo display this information for you
+			$this->setUrlWaiting($sBaseUrl . '?' . ESL_Buckaroo::QUERYSTRING_PUSHMESSAGE . '=' . urlencode(ESL_Buckaroo::STATUS_SUCCESS));
 		}
 	}
 
@@ -163,6 +174,30 @@ class ESL_Buckaroo_ReturnUrl
 			throw new RuntimeException('Reject-URL has not been defined');
 		}
 		return $this->sUrlReject;
+	}
+
+	/**
+	 *
+	 * @throws InvalidArgumentException
+	 *
+	 * @param string $sUrl Absolute URL to reject page
+	 */
+	public function setUrlWaiting($sUrl)
+	{
+		$this->assertAbsoluteUrl($sUrl);
+		$this->sUrlWaiting = $sUrl;
+	}
+
+	/**
+	 *
+	 * @return string
+	 */
+	public function getUrlWaiting()
+	{
+		if (null == $this->sUrlWaiting) {
+			throw new RuntimeException('Waiting-URL has not been defined');
+		}
+		return $this->sUrlWaiting;
 	}
 
 }

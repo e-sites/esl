@@ -33,13 +33,23 @@ class ESL_Buckaroo_TransferTransactionStatus extends ESL_Buckaroo_TransactionSta
 		$this->sPaymentReference = $sPaymentReference;
 	}
 
+	/**
+	 *
+	 * @deprecated ESL_Buckaroo_TransferTransactionStatus is deprecated and will be replaced with ESL_Buckaroo_TransactionStatus
+	 */
 	public function getReference()
 	{
+		trigger_error("ESL_Buckaroo_TransferTransactionStatus is deprecated and will be replaced with ESL_Buckaroo_TransactionStatus", E_USER_DEPRECATED);
 		return $this->sPaymentReference;
 	}
 
+	/**
+	 *
+	 * @deprecated ESL_Buckaroo_TransferTransactionStatus is deprecated and will be replaced with ESL_Buckaroo_TransactionStatus
+	 */
 	public function getIban()
 	{
+		trigger_error("ESL_Buckaroo_TransferTransactionStatus is deprecated and will be replaced with ESL_Buckaroo_TransactionStatus", E_USER_DEPRECATED);
 		return $this->sPaymentIban;
 	}
 }

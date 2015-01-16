@@ -3,9 +3,9 @@
  * Collection of tweets gathered from a user it's timeline
  * 
  * @package Twitter
- * @version $Id: UserTimeline.php 601 2013-10-15 13:52:03Z fpruis $
+ * @version $Id: UserTimeline.php 832 2014-12-24 08:28:39Z fpruis $
  */
-class ESL_Twitter_Response_UserTimeline implements IteratorAggregate
+class ESL_Twitter_Response_UserTimeline implements IteratorAggregate, Countable
 {
 	/**
 	 *
@@ -44,6 +44,18 @@ class ESL_Twitter_Response_UserTimeline implements IteratorAggregate
 	public function getTweets()
 	{
 		return $this->aTweets;
+	}
+
+	/**
+	 * Count the number of tweets that was retreived from the timeline request.
+	 *
+	 * @internal Countable
+	 *
+	 * @return int
+	 */
+	public function count()
+	{
+		return count($this->aTweets);
 	}
 }
 ?>

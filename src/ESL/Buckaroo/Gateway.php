@@ -3,33 +3,15 @@
  * Implementation of the NVP gateway.
  *
  * @package Buckaroo
- * @version $Id: Gateway.php 661 2014-02-14 13:44:44Z fpruis $
+ * @version $Id: Gateway.php 793 2014-09-19 14:43:20Z fpruis $
  */
 class ESL_Buckaroo_Gateway
 {
 	/**
 	 *
-	 * @var string
+	 * @var ESL_Buckaroo_Config
 	 */
-	protected $sGatewayHost;
-
-	/**
-	 *
-	 * @var string
-	 */
-	protected $sMerchantKey;
-
-	/**
-	 *
-	 * @var string
-	 */
-	protected $sSecretKey;
-
-	/**
-	 *
-	 * @var string
-	 */
-	protected $sLocale;
+	protected $oConfig;
 
 	/**
 	 * 
@@ -37,10 +19,7 @@ class ESL_Buckaroo_Gateway
 	 */
 	public function __construct(ESL_Buckaroo_Config $oConfig)
 	{
-		$this->sGatewayHost = $oConfig->getGatewayHost();
-		$this->sMerchantKey = $oConfig->getMerchantKey();
-		$this->sSecretKey = $oConfig->getSecretKey();
-		$this->sLocale = $oConfig->getLocale();
+		$this->oConfig = $oConfig;
 	}
 
 	/**
@@ -48,7 +27,6 @@ class ESL_Buckaroo_Gateway
 	 *
 	 * Get the available methods of payment and other details
 	 *
-	 * @param array $aData
 	 * @return array
 	 */
 	public function transactionRequestSpecification()
@@ -61,9 +39,9 @@ class ESL_Buckaroo_Gateway
 	/**
 	 * This request can be used to request a payment
 	 *
-	 * @throws ESL_Buckaroo_Exception_Payment
+	 * @throws ESL_Buckaroo_Exception_ServiceUnavailable
 	 *
-	 * @param array $aData
+	 * @param ESL_Buckaroo_Request_TransactionRequest $oRequest
 	 * @return string
 	 */
 	public function transactionRequest(ESL_Buckaroo_Request_TransactionRequest $oRequest)
@@ -73,10 +51,17 @@ class ESL_Buckaroo_Gateway
 		return $this->communicate('/nvp/?op=transactionrequest', $aRequestData);
 	}
 
+	public function payRecurrent(ESL_Buckaroo_Request_PayRecurrent $oRequest)
+	{
+		$aData = $oRequest->getData();
+		$aRequestData = $this->completeRequest($aData);
+		return $this->communicate('/nvp/?op=transactionrequest', $aRequestData);
+	}
+
 	/**
 	 * The TransactionStatus request can be used to retrieve the status of a previously created transaction
 	 *
-	 * @param array $aData
+	 * @param ESL_Buckaroo_Request_TransactionStatus $oRequest
 	 * @return array
 	 */
 	public function transactionStatus(ESL_Buckaroo_Request_TransactionStatus $oRequest)
@@ -86,15 +71,23 @@ class ESL_Buckaroo_Gateway
 		return $this->communicate('/nvp/?op=transactionstatus', $aRequestData);
 	}
 
+	public function cancelTransaction(ESL_Buckaroo_Request_CancelTransaction $oRequest)
+	{
+		$aData = $oRequest->getData();
+		$aRequestData = $this->completeRequest($aData);
+		return $this->communicate('/nvp/?op=canceltransaction', $aRequestData);
+	}
+
 	/**
-	 *
-	 * @param string $sRequestPath
+	 * @param $sRequestPath
 	 * @param array $aRequestData
 	 * @return array
+	 * @throws RuntimeException
+	 * @throws ESL_Buckaroo_Exception_ServiceUnavailable
 	 */
 	protected function communicate($sRequestPath, array $aRequestData)
 	{
-		$rCurl = curl_init('https://' . $this->sGatewayHost . $sRequestPath);
+		$rCurl = curl_init('https://' . $this->getConfig()->getGatewayHost() . $sRequestPath);
 		curl_setopt($rCurl, CURLOPT_RETURNTRANSFER, true);
 		curl_setopt($rCurl, CURLOPT_POST, 1);
 		curl_setopt($rCurl, CURLOPT_POSTFIELDS, http_build_query($aRequestData));
@@ -137,9 +130,10 @@ class ESL_Buckaroo_Gateway
 	 */
 	protected function completeRequest(array $aRequestData)
 	{
-		$aRequestData['brq_websiteKey'] = $this->sMerchantKey;
+		$aRequestData['brq_websiteKey'] = $this->getConfig()->getMerchantKey();
 		$aRequestData['brq_latestversiononly'] = 'True';
-		$aRequestData['brq_culture'] = $this->sLocale;
+		$aRequestData['brq_culture'] = $this->getConfig()->getLocale();
+		$aRequestData['brq_channel'] = $this->getConfig()->getChannel();
 		$aRequestData['brq_signature'] = $this->signRequest($aRequestData);
 		return $aRequestData;
 	}
@@ -223,9 +217,19 @@ class ESL_Buckaroo_Gateway
 		}
 
 		// Append secret key
-		$sSignString .= $this->sSecretKey;
+		$sSignString .= $this->getConfig()->getSecretKey();
 
 		return sha1($sSignString);
+	}
+
+	/**
+	 * The configuration as provided during instantiation
+	 *
+	 * @return ESL_Buckaroo_Config
+	 */
+	protected function getConfig()
+	{
+		return $this->oConfig;
 	}
 }
 ?>

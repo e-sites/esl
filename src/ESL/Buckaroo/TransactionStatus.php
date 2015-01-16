@@ -5,7 +5,7 @@
  * Created with the details sent to us by Buckaroo
  *
  * @package Buckaroo
- * @version $Id: TransactionStatus.php 684 2014-04-16 08:39:18Z fpruis $
+ * @version $Id: TransactionStatus.php 767 2014-08-20 06:20:50Z fpruis $
  */
 class ESL_Buckaroo_TransactionStatus
 {
@@ -41,6 +41,13 @@ class ESL_Buckaroo_TransactionStatus
 	protected $iStatusCode;
 
 	/**
+	 * Is this a recurrent transaction?
+	 *
+	 * @var boolean
+	 */
+	protected $bIsRecurrent;
+
+	/**
 	 *
 	 * @param string $sTransactionKey
 	 * @param int $iStatusCode
@@ -56,6 +63,8 @@ class ESL_Buckaroo_TransactionStatus
 
 		$this->sTransactionKey = $sTransactionKey;
 		$this->iStatusCode = (int) $iStatusCode;
+
+		$this->bIsRecurrent = false;
 	}
 
 	/**
@@ -164,6 +173,24 @@ class ESL_Buckaroo_TransactionStatus
 	public function isWaiting()
 	{
 		return ($this->getStatus() == ESL_Buckaroo::STATUS_WAITING);
+	}
+
+	/**
+	 * Mark that the transaction is recurrent.
+	 */
+	public function markAsRecurrent()
+	{
+		$this->bIsRecurrent = true;
+	}
+
+	/**
+	 * Returns whether the transaction is recurrent (ie started with the 'PayRecurrent' action).
+	 *
+	 * @return bool
+	 */
+	public function isRecurrent()
+	{
+		return $this->bIsRecurrent;
 	}
 }
 ?>
