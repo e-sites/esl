@@ -143,11 +143,11 @@ class ESL_Password
 		// Timing-attack safe way to check whether the hashes match
 		// Because we used the hash as salt, the plain-text should be hashed into the same hash
 		$iDiff = 0;
-		for ($i = 0; $i < strlen($sVerifyHash); $i++) {
+		for ($i = 0; $i < min(strlen($sVerifyHash), strlen($this->sHash)); $i++) {
 			$iDiff |= (ord($sVerifyHash[$i]) ^ ord($this->sHash[$i]));
 		}
 
-		return ($iDiff === 0);
+		return ($iDiff === 0) && (strlen($sVerifyHash) === strlen($this->sHash));
 	}
 
 	/**
