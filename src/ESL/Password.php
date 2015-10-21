@@ -140,14 +140,17 @@ class ESL_Password
 			return false;
 		}
 
+		$sTestHash = str_pad($sVerifyHash, strlen($this->sHash), "\0", STR_PAD_RIGHT);
+		$sExpectedHash = str_pad($this->sHash, strlen($sVerifyHash), "\0", STR_PAD_RIGHT);
+
 		// Timing-attack safe way to check whether the hashes match
 		// Because we used the hash as salt, the plain-text should be hashed into the same hash
 		$iDiff = 0;
-		for ($i = 0; $i < min(strlen($sVerifyHash), strlen($this->sHash)); $i++) {
-			$iDiff |= (ord($sVerifyHash[$i]) ^ ord($this->sHash[$i]));
+		for ($i = 0; $i < strlen($sTestHash); $i++) {
+			$iDiff |= (ord($sTestHash[$i]) ^ ord($sExpectedHash[$i]));
 		}
 
-		return ($iDiff === 0) && (strlen($sVerifyHash) === strlen($this->sHash));
+		return ($iDiff === 0);
 	}
 
 	/**
