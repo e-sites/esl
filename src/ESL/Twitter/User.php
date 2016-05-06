@@ -5,7 +5,7 @@
  * @see https://dev.twitter.com/docs/platform-objects/users
  * 
  * @package Twitter
- * @version $Id: User.php 631 2013-11-06 12:14:43Z fpruis $
+ * @version $Id$
  */
 class ESL_Twitter_User
 {

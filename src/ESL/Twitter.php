@@ -7,7 +7,7 @@
  * @see https://dev.twitter.com/docs/api/1.1
  *
  * @package Twitter
- * @version $Id: Twitter.php 601 2013-10-15 13:52:03Z fpruis $
+ * @version $Id: Twitter.php 1023 2016-05-02 08:48:33Z jgeerts $
  */
 class ESL_Twitter
 {
@@ -63,12 +63,9 @@ class ESL_Twitter
 	/**
 	 * Send request to Twitter API and return result
 	 *
-	 * @throws RuntimeException
 	 *
-	 * @param string $sPath
 	 * @param ESL_Twitter_Request $oRequest
-	 * @param bool $bUsePostMethod
-	 * @return stdClass|array
+	 * @return array|stdClass
 	 */
 	protected function doRequest(ESL_Twitter_Request $oRequest)
 	{
@@ -196,6 +193,20 @@ class ESL_Twitter
 	public function search(ESL_Twitter_Request_Search $oRequest)
 	{
 		return new ESL_Twitter_Response_Search($this->doRequest($oRequest));
+	}
+
+	/**
+	 * Lookup a collection of tweets based on their IDs.
+	 * This is useful when the full tweets are not available, for example when they came from the search method.
+	 * 
+	 * @throws RuntimeException
+	 *
+	 * @param ESL_Twitter_Request_StatusLookup $oRequest
+	 * @return ESL_Twitter_Response_StatusLookup
+	 */
+	public function lookupStatus(ESL_Twitter_Request_StatusLookup $oRequest)
+	{
+		return new ESL_Twitter_Response_StatusLookup($this->doRequest($oRequest));
 	}
 
 }

@@ -13,7 +13,7 @@
  * @see https://dev.twitter.com/docs/working-with-timelines Working with Timelines
  * 
  * @package Twitter
- * @version $Id: UserTimeline.php 601 2013-10-15 13:52:03Z fpruis $
+ * @version $Id$
  */
 class ESL_Twitter_Request_UserTimeline extends ESL_Twitter_Request
 {

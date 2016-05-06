@@ -5,7 +5,7 @@
  * @see https://github.com/jrconlin/oauthsimple
  * 
  * @package Twitter
- * @version $Id: Oauth.php 601 2013-10-15 13:52:03Z fpruis $
+ * @version $Id$
  */
 class ESL_Twitter_Oauth
 {

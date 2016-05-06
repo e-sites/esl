@@ -5,7 +5,7 @@
  * @see https://dev.twitter.com/docs/platform-objects/tweets
  * 
  * @package Twitter
- * @version $Id: Tweet.php 601 2013-10-15 13:52:03Z fpruis $
+ * @version $Id$
  */
 class ESL_Twitter_Tweet
 {
@@ -98,14 +98,14 @@ class ESL_Twitter_Tweet
 
 		if (!empty($oStruct->retweeted_status)) {
 			// Get urls/media/mentions from original tweet
-			$this->parseTweetEntities($oStruct->retweeted_status->entities);
+			$this->parseTweetEntities($oStruct->retweeted_status);
 			// Manually add mention to original tweep
 			$this->aMentions[] = $oStruct->retweeted_status->user->screen_name;
 
 			// Set custom tweet with retweet header and full, original tweet
 			$this->sText = 'RT @' . $oStruct->retweeted_status->user->screen_name . ': ' . $oStruct->retweeted_status->text;
 		} else {
-			$this->parseTweetEntities($oStruct->entities);
+			$this->parseTweetEntities($oStruct);
 			$this->sText = $oStruct->text;
 		}
 
@@ -120,25 +120,33 @@ class ESL_Twitter_Tweet
 	 * 
 	 * @param stdClass $oEntities
 	 */
-	protected function parseTweetEntities(stdClass $oEntities)
+	protected function parseTweetEntities(stdClass $oStatus)
 	{
-		foreach ($oEntities->hashtags as $oTag) {
+		foreach ($oStatus->entities->hashtags as $oTag) {
 			$this->aHashtags[] = $oTag->text;
 		}
 
-		foreach ($oEntities->urls as $oUrl) {
+		foreach ($oStatus->entities->urls as $oUrl) {
 			// Simple list of url's used in tweet
 			$this->aUrls[] = $oUrl->url;
 			$this->aEntityUrls[] = new ESL_Twitter_Entity_Url($oUrl);
 		}
 
-		foreach ($oEntities->user_mentions as $oMention) {
+		foreach ($oStatus->entities->user_mentions as $oMention) {
 			$this->aMentions[] = $oMention->screen_name;
 		}
 
-		if (isset($oEntities->media)) {
-			foreach ($oEntities->media as $oMedia) {
+		if (isset($oStatus->entities->media)) {
+			foreach ($oStatus->entities->media as $oMedia) {
 				$this->aEntityMedia[] = new ESL_Twitter_Entity_Media($oMedia);
+			}
+		}
+
+		if (isset($oStatus->extended_entities->media)) {
+			foreach ($oStatus->extended_entities->media as $oMedia) {
+				if ($oMedia->type != 'photo') {
+					$this->aEntityMedia[] = new ESL_Twitter_Entity_Media($oMedia);
+				}
 			}
 		}
 	}

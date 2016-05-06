@@ -10,7 +10,7 @@
  * @see https://dev.twitter.com/docs/working-with-timelines Working with Timelines
  *
  * @package Twitter
- * @version $Id: Search.php 650 2013-12-24 08:54:14Z fpruis $
+ * @version $Id$
  */
 class ESL_Twitter_Request_Search extends ESL_Twitter_Request
 {

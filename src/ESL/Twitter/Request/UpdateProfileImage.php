@@ -8,7 +8,7 @@
  * @see https://dev.twitter.com/docs/api/1.1/post/account/update_profile_image
  *
  * @package Twitter
- * @version $Id: UpdateProfileImage.php 601 2013-10-15 13:52:03Z fpruis $
+ * @version $Id$
  */
 class ESL_Twitter_Request_UpdateProfileImage extends ESL_Twitter_Request
 {

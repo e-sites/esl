@@ -14,13 +14,15 @@
  * - An even border width (4, 8, 10, etc) is increased by one, except borderwidth 2. Internal IM bug
  * - trim() and rotate() are not available, because they would change the input width/height
  * - roundCorners are not visible on transparent PNG's, because the background- and cornercolor are shared
+ * - Changing the background color does not purge the thumb. It has to be manually removed before color changes are visible
+ * - resizeCrop combined with a density above 1 gives unexpected results for input smaller than requested dimensions
  *
  * @todo Move operations, like thumbnail, extend, border, into seperate classes. Minimizes this class and allows extending with custom operators
  *
  * @package Image
- * @version $Id: Image.php 770 2014-08-28 06:50:26Z fpruis $
+ * @version $Id: Image.php 971 2015-11-12 08:52:19Z jgeerts $
  */
-final class ESL_Image
+class ESL_Image
 {
 	const PATH_CONVERT = 'convert';
 	const PATH_OPTIPNG = 'optipng';
@@ -56,7 +58,7 @@ final class ESL_Image
 
 	/**
 	 * Basedir for input and output
-	 * 
+	 *
 	 * @var string
 	 */
 	protected $sBasedir;
@@ -65,14 +67,14 @@ final class ESL_Image
 	 * Path to image, relative to basedir
 	 *
 	 * As given in constructor
-	 * 
+	 *
 	 * @var string
 	 */
 	protected $sInputFile;
 
 	/**
 	 * Absolute path to image
-	 * 
+	 *
 	 * @var string
 	 */
 	protected $sInputPath;
@@ -86,14 +88,14 @@ final class ESL_Image
 
 	/**
 	 * Image height
-	 * 
+	 *
 	 * @var int
 	 */
 	protected $iInputHeight;
 
 	/**
 	 * Image aspect ratio
-	 * 
+	 *
 	 * @var float
 	 */
 	protected $fInputRatio;
@@ -111,7 +113,7 @@ final class ESL_Image
 	 * Image basename
 	 *
 	 * Basename includes file-extension
-	 * 
+	 *
 	 * @var string
 	 */
 	protected $sInputBasename;
@@ -120,14 +122,14 @@ final class ESL_Image
 	 * Image filename
 	 *
 	 * Filename excludes file-extension
-	 * 
+	 *
 	 * @var string
 	 */
 	protected $sInputFilename;
 
 	/**
 	 * Image file-extension
-	 * 
+	 *
 	 * @var string
 	 */
 	protected $sInputExtension;
@@ -176,10 +178,19 @@ final class ESL_Image
 	protected $fDensity = self::DENSITY_MDPI;
 
 	/**
+	 * Only shrink images to fit into the size given. Never enlarge.
+	 *
+	 * Enlarging images generally may not be desirable as it tends to produce 'fuzzy' enlargements.
+	 *
+	 * @var bool
+	 */
+	protected $bOnlyShrink = true;
+
+	/**
 	 * Test whether file is locally accesible and return the absolute path to the given file
-	 * 
+	 *
 	 * @throws InvalidArgumentException
-	 * 
+	 *
 	 * @param string Path to file $sPath
 	 * @return string FQN
 	 */
@@ -205,7 +216,7 @@ final class ESL_Image
 	 * Not to be confused with filesize
 	 *
 	 * @throws InvalidArgumentException
-	 * 
+	 *
 	 * @param int $iSize
 	 * @return null
 	 */
@@ -219,13 +230,13 @@ final class ESL_Image
 	/**
 	 * Test for a valid color
 	 *
-	 * We only accept RGB in hex-notation. 
+	 * We only accept RGB in hex-notation.
 	 * Special case 'none' is also allowed
 	 * Alpha-channel can not be given, as this gives unexpected results when we overlay mulitple layers, for example when creating rounded corners and borders, the opacity for
 	 * the border would be multiplicated in the corners
 	 *
 	 * @throws InvalidArgumentException
-	 * 
+	 *
 	 * @param string $sColor
 	 * @return null
 	 */
@@ -244,9 +255,9 @@ final class ESL_Image
 
 	/**
 	 * Test for a valid gravity
-	 * 
+	 *
 	 * @throws InvalidArgumentException
-	 * 
+	 *
 	 * @param int $iGravity
 	 * @return null
 	 */
@@ -273,7 +284,7 @@ final class ESL_Image
 	 * Read and return image dimensions
 	 *
 	 * Returns array with keys 'width' and 'height', or null on failure (if file does not exist, could not be read, is not an image, etc)
-	 * 
+	 *
 	 * @param string $sPath Path to file
 	 * @return array With keys 'width' and 'height'
 	 */
@@ -313,7 +324,7 @@ final class ESL_Image
 	 * Provide the image its width and height if these are already known to prevent them having to be read from file
 	 *
 	 * @throws InvalidArgumentException
-	 * 
+	 *
 	 * @param string $sBasedir Base directory to read images from and write thumb to
 	 * @param string $sFile Path to the input image relative to basedir
 	 * @param int $iSourceWidth Width of input image in pixels, always use together with height, omit if unknown or unsure
@@ -387,11 +398,11 @@ final class ESL_Image
 			case 'psd':
 				// Take first page/frame instead of handling each as seperate input
 				$sFileInput = $sFileInput . '[0]';
-				// no break; intended to do the svg and png rules too
+			// no break; intended to do the svg and png rules too
 
 			case 'svg':
 				$aArgumentsInput[] = '-density 300';
-				// no break; intended to do the png rule too
+			// no break; intended to do the png rule too
 
 			case 'png':
 				$this->bDoBackgroundColor = true;
@@ -486,7 +497,12 @@ final class ESL_Image
 			if ($this->sMaskGravity) {
 				$aArgumentsOutput[] = sprintf('\( %s -gravity %s +clone -compose CopyOpacity \) -composite', escapeshellarg($this->sMaskFile), escapeshellarg($this->sMaskGravity));
 			} else {
-				$aArgumentsOutput[] = sprintf("\( -resize '%dx%d!' %s -gravity 'center' +clone -compose CopyOpacity \) -composite", $iOutputWidth, $iOutputHeight, escapeshellarg($this->sMaskFile));
+				$aArgumentsOutput[] = sprintf(
+					"\\( -resize '%dx%d!' %s -gravity 'center' +clone -compose CopyOpacity \\) -composite",
+					$iOutputWidth,
+					$iOutputHeight,
+					escapeshellarg($this->sMaskFile)
+				);
 			}
 		}
 
@@ -504,7 +520,7 @@ final class ESL_Image
 	 *
 	 * Is only accurate if called during save()
 	 * Has to be processed with fDensity for image operations. Use as-is in for example output filename
-	 * 
+	 *
 	 * @return int
 	 */
 	protected function generateOutputWidth()
@@ -525,7 +541,7 @@ final class ESL_Image
 	 *
 	 * Is only accurate if called during save()
 	 * Has to be processed with fDensity for image operations. Use as-is in for example output filename
-	 * 
+	 *
 	 * @return int
 	 */
 	protected function generateOutputHeight()
@@ -577,7 +593,7 @@ final class ESL_Image
 
 	/**
 	 * Generate extension to be used for output file
-	 * 
+	 *
 	 * @return string
 	 */
 	protected function generateOutputExtension()
@@ -670,7 +686,7 @@ final class ESL_Image
 	 * Default filename: %wx%h/%p/%f-%u
 	 * Default folder: thumb
 	 * Example ouput filename: /thumb/400x300/files/Banners/promotie2013-faa7299ba52140eac2563f159f389535.jpg
-	 * 
+	 *
 	 * @throws RuntimeException
 	 *
 	 * @param string $sFilename Filename, without file extension, possibly with dynamic placeholders
@@ -728,7 +744,9 @@ final class ESL_Image
 			$aOutput = $iExitcode = null;
 			exec('nice ' . $sCmdConvert . ' 2>&1 >/dev/null', $aOutput, $iExitcode);
 			if ($iExitcode !== 0) {
-				throw new RuntimeException(implode("\n", $aOutput), $iExitcode, new RuntimeException("Command '$sCmdConvert' failed."));
+				// Remove temporary file
+				unlink($sOutputPath);
+				throw new RuntimeException("Command '$sCmdConvert' failed.", $iExitcode, new RuntimeException(implode("\n", $aOutput)));
 			}
 
 			// Optimise
@@ -756,7 +774,7 @@ final class ESL_Image
 
 	/**
 	 * Return path to image, relative to basedir
-	 * 
+	 *
 	 * @return string
 	 */
 	public function __toString()
@@ -766,7 +784,7 @@ final class ESL_Image
 
 	/**
 	 * Path to source image, relative to basedir
-	 * 
+	 *
 	 * @return string
 	 */
 	public function getFile()
@@ -871,7 +889,7 @@ final class ESL_Image
 
 	/**
 	 * Resize
-	 * 
+	 *
 	 * ImageMagick supports severals modifiers for more control over the resize command;
 	 *  scale%             Height and width both scaled by specified percentage.
 	 *  scale-x%xscale-y%  Height and width individually scaled by specified percentages. (Only one % symbol needed.)
@@ -883,13 +901,13 @@ final class ESL_Image
 	 *  widthxheight>
 	 *  widthxheight<      Enlarges an image with dimension(s) smaller than the corresponding width and/or height argument(s).
 	 *  area@              Resize image to have specified area in pixels. Aspect ratio is preserved.
-	 * 
+	 *
 	 * @param int $iWidth
 	 * @param int $iHeight
 	 * @param string $sModifier
 	 * @return null
 	 */
-	protected function thumbnail($iWidth, $iHeight, $sModifier = self::THUMBNAIL_MAXIMUM)
+	protected function thumbnail($iWidth, $iHeight, $sModifier)
 	{
 		$this->bDoThumbnail = true;
 		$this->iThumbnailWidth = $iWidth;
@@ -919,7 +937,7 @@ final class ESL_Image
 
 	/**
 	 * Get string representation for gravity, to be used with ImageMagick-command
-	 * 
+	 *
 	 * @param string $iGravity
 	 * @return string
 	 */
@@ -951,19 +969,20 @@ final class ESL_Image
 	/**
 	 * Resize to fit inside given box
 	 *
-	 * Entire image is preserved and scaled untill it fits inside of the given box. Depending on the aspect ratio of the source and the requested dimensions, the resulting image
-	 * will either exactly fit the box, be smaller on either one of the sides, or be smaller on both dimensions if the source image is smaller than the requested size.
+	 * The entire image is preserved, no part of the image is lost.
+	 * The given dimensions are not the final size of the image but the maximum size of the box into which the image is to be fitted. Depending on the aspect ratio of the source
+	 * and the dimensions the resulting image will either exactly fit the box or be smaller on either one of the sides.
 	 *
 	 * You can use a zero value for one of either dimensions to have it automatically determined based on aspect ratio.
 	 *
 	 * Use ESL_Image->resizeExtend() to perform the same scaling, and then extend the canvas to the requested dimensions using a background color
-	 * 
+	 *
 	 * @see $this->resizeCrop Resize to be framed in given box
 	 * @see $this->resizeExtend Resize to fit inside given box, extendind canvas to match requested dimensions.
 	 * @see $this->resizeStretch Resize to fix inside given box, ignoring aspect ratio and streching and shrinking sides independently
-	 * 
+	 *
 	 * @throws InvalidArgumentException
-	 * 
+	 *
 	 * @param int $iWidth Maximum width
 	 * @param int $iHeight Maximum height
 	 * @return \ESL_Image $this
@@ -988,28 +1007,28 @@ final class ESL_Image
 		} elseif ($iHeight === 0) {
 			// Calculate height based on width and known ratio
 			$iHeight = (int) round($iWidth / $fInputRatio);
-		}
-
-		// Preserve aspect ratio. ImageMagick actually does this itself, but we need this to be set for the rounded border to be positioned correctly
-		if ($fInputRatio >= $iWidth / $iHeight) {
-			if ($iWidth > $this->getWidth()) {
-				$iWidth = $this->getWidth();
-			}
-			$iHeight = (int) round($iWidth / $fInputRatio);
 		} else {
-			if ($iHeight > $this->getHeight()) {
-				$iHeight = $this->getHeight();
+			// Preserve aspect ratio. ImageMagick actually does this itself, but we need this to be set for the rounded border to be positioned correctly
+			if ($fInputRatio >= $iWidth / $iHeight) {
+				if ($this->bOnlyShrink && $iWidth > $this->getWidth()) {
+					$iWidth = $this->getWidth();
+				}
+				$iHeight = (int) round($iWidth / $fInputRatio);
+			} else {
+				if ($this->bOnlyShrink && $iHeight > $this->getHeight()) {
+					$iHeight = $this->getHeight();
+				}
+				$iWidth = (int) round($iHeight * $fInputRatio);
 			}
-			$iWidth = (int) round($iHeight * $fInputRatio);
 		}
 
-		$this->thumbnail($iWidth, $iHeight, self::THUMBNAIL_SHRINK);
+		$this->thumbnail($iWidth, $iHeight, ($this->bOnlyShrink ? self::THUMBNAIL_SHRINK : self::THUMBNAIL_MAXIMUM));
 
 		return $this;
 	}
 
 	/**
-	 * Resize to be framed in given box
+	 * Resize to fill given box, shaving image
 	 *
 	 * Parts of image are chopped off to make the image fit in the requested box. Use the gravity to control which part is cut off.
 	 * Aspect ratio of source is preserved.
@@ -1019,7 +1038,7 @@ final class ESL_Image
 	 * @see $this->resizeStretch Resize to fix inside given box, ignoring aspect ratio and streching and shrinking sides independently
 	 *
 	 * @throws InvalidArgumentException
-	 * 
+	 *
 	 * @param int $iWidth Width
 	 * @param int $iHeight Height
 	 * @param int $iGravity One of the ESL_Image::GRAVITY-constants where to extend the canvas. Defaults to GRAVITY_CENTER
@@ -1036,19 +1055,16 @@ final class ESL_Image
 			static::assertGravity($iGravity);
 		}
 
-		if ($iWidth < $this->getWidth() && $iHeight < $this->getHeight()) {
-			// Scale to minimal dimensions; either or both side match the dimension, the other or neither is larger
-			$this->thumbnail($iWidth, $iHeight, self::THUMBNAIL_MINIMUM);
-		} else {
-			// Source is too small; extext canvas
-			if ($iGravity && $iWidth > $this->getWidth()) {
-				// Source is too narrow. Unset horizontal gravity
-				$iGravity ^= ($iGravity & (self::GRAVITY_EAST | self::GRAVITY_WEST));
-			}
-			if ($iGravity && $iHeight > $this->getHeight()) {
-				// Source is too low. Unset vertical gravity
-				$iGravity ^= ($iGravity & (self::GRAVITY_NORTH | self::GRAVITY_SOUTH));
-			}
+		// Scale to minimal dimensions; either or both side match the dimension, the other or neither is larger
+		$this->thumbnail($iWidth, $iHeight, self::THUMBNAIL_MINIMUM);
+		// Source is too small; extext canvas
+		if ($iGravity && $iWidth > $this->getWidth()) {
+			// Source is too narrow. Unset horizontal gravity
+			$iGravity ^= ($iGravity & (self::GRAVITY_EAST | self::GRAVITY_WEST));
+		}
+		if ($iGravity && $iHeight > $this->getHeight()) {
+			// Source is too low. Unset vertical gravity
+			$iGravity ^= ($iGravity & (self::GRAVITY_NORTH | self::GRAVITY_SOUTH));
 		}
 
 		// Resize canvas
@@ -1058,7 +1074,7 @@ final class ESL_Image
 	}
 
 	/**
-	 * Resize to fit inside given box, extendind canvas to match requested dimensions.
+	 * Resize to fill given box, extending image with background color
 	 *
 	 * Performs the same method of scaling as ESL_Image->resizeBox(), and afterwards extends the canvas to the requested dimensions using the set background color.
 	 *
@@ -1067,7 +1083,7 @@ final class ESL_Image
 	 * @see $this->resizeStretch Resize to fix inside given box, ignoring aspect ratio and streching and shrinking sides independently
 	 *
 	 * @throws InvalidArgumentException
-	 * 
+	 *
 	 * @param int $iWidth Width
 	 * @param int $iHeight Height
 	 * @param int $iGravity One of the ESL_Image::GRAVITY-constants where to extend the canvas. Defaults to GRAVITY_CENTER
@@ -1085,7 +1101,7 @@ final class ESL_Image
 		}
 
 		// Scale to fit
-		$this->thumbnail($iWidth, $iHeight, self::THUMBNAIL_SHRINK);
+		$this->thumbnail($iWidth, $iHeight, ($this->bOnlyShrink ? self::THUMBNAIL_SHRINK : self::THUMBNAIL_MAXIMUM));
 
 		// Extent canvas
 		$this->extent($iWidth, $iHeight, $iGravity);
@@ -1161,7 +1177,7 @@ final class ESL_Image
 	 * Round the four corners
 	 *
 	 * Similair to border-radius in CSS
-	 * 
+	 *
 	 * @param int $iRadius Border radius in pixels
 	 * @return \ESL_Image $this
 	 */
@@ -1207,7 +1223,7 @@ final class ESL_Image
 	 * Copy the transparency from the given mask into the source image. Any non-transparent regions are ignored, and therefor not modified in the source
 	 *
 	 * If no gravity is given the mask will be streched to overlay the entire source image. Otherwise the mask maintains its dimensions and is positioned accordingly
-	 * 
+	 *
 	 * @param string $sFile Image to use as mask. Unrelated to basedir. Preferably provide an absolute path
 	 * @param int $iGravity One of the ESL_Image::GRAVITY-constants where to position the mask. Default null to stretch the mask to fit
 	 * @return \ESL_Image $this
@@ -1232,7 +1248,7 @@ final class ESL_Image
 	 * Ignore cached version of thumbnail and force to generate new file
 	 *
 	 * Use while debugging. Has a big performance impact because the cache will be ignored
-	 * 
+	 *
 	 * @return \ESL_Image $this
 	 */
 	public function regenerate()
@@ -1245,9 +1261,9 @@ final class ESL_Image
 	 * Change image density
 	 *
 	 * Affects the size of the outputted image. Usable for example to create a variant of a thumbnail to display on a retina display, which is required to be twice the size.
-	 * 
+	 *
 	 * @throws InvalidArgumentException
-	 * 
+	 *
 	 * @param float $fDensity One of the ESL_Image::DENSITY-constants, or a custom value
 	 * @return \ESL_Image $this
 	 */
@@ -1260,5 +1276,33 @@ final class ESL_Image
 		$this->fDensity = $fDensity;
 		return $this;
 	}
+
+	/**
+	 * Allow ESL_Image to enlarge images that are smaller than the requested output.
+	 *
+	 * By default ESL_Image refuses to 'blow up' or enlarge images because this can result in 'fuzzy' results. Preferably the given input is large enough to produce the desired
+	 * output. In cases this can not be enforced call this method to allow enlarging inputs.
+	 *
+	 * Allowing to enlarge inputs gives a more consistent output for example resizeCrop; By default crop will behave as extend when used with an input that is too small. By enabling
+	 * enlargments the output will always be the same
+	 *
+	 * @return \ESL_Image $this
+	 */
+	public function allowEnlargement()
+	{
+		$this->bOnlyShrink = false;
+
+		return $this;
+	}
+
+	/**
+	 * @see allowEnlargement
+	 * @deprecated Typo. Use $this->allowEnlargement();
+	 */
+	public function allowEnlargment()
+	{
+		return $this->allowEnlargement();
+	}
+
 }
 ?>

@@ -3,7 +3,7 @@
  * Collection of tweets as a search result
  *
  * @package Twitter
- * @version $Id: Search.php 601 2013-10-15 13:52:03Z fpruis $
+ * @version $Id$
  */
 class ESL_Twitter_Response_Search implements IteratorAggregate
 {

@@ -3,7 +3,7 @@
  * The tweet that was stored
  * 
  * @package Twitter
- * @version $Id: StatusUpdate.php 601 2013-10-15 13:52:03Z fpruis $
+ * @version $Id$
  */
 class ESL_Twitter_Response_StatusUpdate
 {

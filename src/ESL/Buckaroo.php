@@ -6,7 +6,7 @@
  * ESL_Buckaroo_CallbackInterface has to be provided which will be called to process payments.
  *
  * @package Buckaroo
- * @version $Id: Buckaroo.php 793 2014-09-19 14:43:20Z fpruis $
+ * @version $Id: Buckaroo.php 903 2015-07-08 13:44:45Z jgeerts $
  */
 class ESL_Buckaroo
 {
@@ -373,7 +373,10 @@ class ESL_Buckaroo
 		}
 
 		if (!$oPayService->supportsAction(ESL_Buckaroo_Service::ACTION_PAYRECURRENT)) {
-			throw new InvalidArgumentException("The service ".$oPayService->getId()." does not support the '" . ESL_Buckaroo_Service::ACTION_PAYRECURRENT . "' action, which is required when creating a payment.");
+			throw new InvalidArgumentException(
+				"The service " . $oPayService->getId().  " does not support the '" . ESL_Buckaroo_Service::ACTION_PAYRECURRENT
+				. "' action, which is required when creating a payment."
+			);
 		}
 
 		$oRequest = new ESL_Buckaroo_Request_PayRecurrent($oPayment, $oPayService);
@@ -395,7 +398,7 @@ class ESL_Buckaroo
 			throw new RuntimeException("Could not map Recurrent Buckaroo transaction '$sTransactionKey' to original transaction '" . $oPayment->getOriginalTransactionKey() . "'.");
 		}
 
-		$oStatus = ESL_Buckaroo_TransactionStatusFactory::createTransactionStatus($aResponse);
+		$oStatus = ESL_Buckaroo_TransactionStatusFactory::createTransactionStatus($aResponse, $this->getGateway());
 		$this->handleTransactionStatus($oStatus);
 		return $oStatus;
 	}
@@ -455,23 +458,7 @@ class ESL_Buckaroo
 		//	With signature verification out of the way, convert the response to lowercase for easier handling.
 		$aLcPushmessage = array_change_key_case($aPushmessage, CASE_LOWER);
 
-		/*
-		 * If there is a transaction group, fetch the status for the group and use that instead of the original status.
-		 * This happens if a user started paying with a "limited funds" payment method, eg. giftcard, and then had to do
-		 * another payment to complete the payment. (eg €20 order, €5 giftcard and €15 iDEAL payment).
-		 * Note that this second payment can, again, be a limited funds payment. (€20 order can be payed by using 4 €5 giftcards)
-		 */
-		if (!empty($aLcPushmessage['brq_relatedtransaction_partialpayment'])) {
-			$sGroupTransaction = $aLcPushmessage['brq_relatedtransaction_partialpayment'];
-			$oGroupRequest = new ESL_Buckaroo_Request_TransactionStatus($sGroupTransaction);
-			$aGroupResponse = $this->getGateway()->transactionStatus($oGroupRequest);
-
-			//	Use the group status code, because we do not care about whether or not the partial payment succeeded,
-			//	we want to know if the entire payment succeeded.
-			$aLcPushmessage['brq_statuscode'] = $aGroupResponse['brq_statuscode'];
-		}
-
-		$oStatus = ESL_Buckaroo_TransactionStatusFactory::createTransactionStatus($aLcPushmessage);
+		$oStatus = ESL_Buckaroo_TransactionStatusFactory::createTransactionStatus($aLcPushmessage, $this->getGateway());
 		$this->handleTransactionStatus($oStatus);
 
 		return $oStatus;
@@ -498,22 +485,7 @@ class ESL_Buckaroo
 			throw new RuntimeException("No status code in response.");
 		}
 
-		/*
-		 * If there is a transaction group, fetch the status for the group and use that instead of the original status.
-		 * This happens if a user started paying with a "limited funds" payment method, eg. giftcard, and then had to do
-		 * another payment to complete the payment. (eg €20 order, €5 giftcard and €15 iDEAL payment).
-		 * Note that this second payment can, again, be a limited funds payment. (€20 order can be payed by using 4 €5 giftcards.)
-		 */
-		if (!empty($aResponse['brq_relatedtransaction_partialpayment'])) {
-			$oGroupRequest = new ESL_Buckaroo_Request_TransactionStatus($aResponse['brq_relatedtransaction_partialpayment']);
-			$aGroupResponse = $this->getGateway()->transactionStatus($oGroupRequest);
-
-			//	Use the group status code, because we do not care about whether or not the partial payment succeeded,
-			//	we want to know if the entire payment succeeded.
-			$aResponse['brq_statuscode'] = $aGroupResponse['brq_statuscode'];
-		}
-
-		$oStatus = ESL_Buckaroo_TransactionStatusFactory::createTransactionStatus($aResponse);
+		$oStatus = ESL_Buckaroo_TransactionStatusFactory::createTransactionStatus($aResponse, $this->getGateway());
 		$this->handleTransactionStatus($oStatus);
 
 		return $oStatus;

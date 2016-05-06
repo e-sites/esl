@@ -11,7 +11,7 @@
  * @see https://dev.twitter.com/docs/api/1.1/post/statuses/update
  * 
  * @package Twitter
- * @version $Id: StatusUpdate.php 601 2013-10-15 13:52:03Z fpruis $
+ * @version $Id$
  */
 class ESL_Twitter_Request_StatusUpdate extends ESL_Twitter_Request
 {

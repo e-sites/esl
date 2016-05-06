@@ -1,11 +1,11 @@
 <?php
 /**
- * Collection of tweets gathered from a user it's timeline
+ * A collection containing the tweets for which the lookup was performed.
  * 
  * @package Twitter
  * @version $Id$
  */
-class ESL_Twitter_Response_UserTimeline implements IteratorAggregate, Countable
+class ESL_Twitter_Response_StatusLookup implements IteratorAggregate, Countable
 {
 	/**
 	 *

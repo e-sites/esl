@@ -5,7 +5,7 @@
  * @see https://dev.twitter.com/docs/tweet-entities
  *
  * @package Twitter
- * @version $Id: Url.php 662 2014-02-14 14:17:32Z fpruis $
+ * @version $Id$
  */
 class ESL_Twitter_Entity_Url
 {

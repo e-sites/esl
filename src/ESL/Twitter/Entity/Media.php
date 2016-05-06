@@ -5,7 +5,7 @@
  * @see https://dev.twitter.com/docs/tweet-entities
  *
  * @package Twitter
- * @version $Id: Media.php 662 2014-02-14 14:17:32Z fpruis $
+ * @version $Id$
  */
 class ESL_Twitter_Entity_Media
 {
@@ -52,6 +52,11 @@ class ESL_Twitter_Entity_Media
 	protected $aSizes;
 
 	/**
+	 * @var array
+	 */
+	protected $aVariants;
+
+	/**
 	 *
 	 * @param stdClass $oStruct
 	 */
@@ -64,13 +69,26 @@ class ESL_Twitter_Entity_Media
 		$this->sText = $oStruct->url;
 		$this->sTextDisplay = (!empty($oStruct->display_url) ? $oStruct->display_url : $oStruct->url);
 
-		foreach ($oStruct->sizes as $sSize => $oSize) {
-			$this->aSizes[$sSize] = array(
-				'w' => $oSize->w,
-				'h' => $oSize->h,
-				'resize' => $oSize->resize,
-				'css' => sprintf('width:%spx; height:%spx;', $oSize->w, $oSize->h),
-			);
+		$this->sizes = array();
+		$this->aVariants = array();
+
+		if (isset($oStruct->sizes)) {
+			foreach ($oStruct->sizes as $sSize => $oSize) {
+				$this->aSizes[$sSize] = array(
+					'w' => $oSize->w,
+					'h' => $oSize->h,
+					'resize' => $oSize->resize,
+					'css' => sprintf('width:%spx; height:%spx;', $oSize->w, $oSize->h),
+				);
+			}
+		}
+		
+		if (isset($oStruct->video_info)) {
+			foreach ($oStruct->video_info->variants as $variant) {
+				if ($variant->content_type == 'video/mp4') {
+					$this->aVariants[] = $variant;
+				}
+			}
 		}
 	}
 
@@ -105,8 +123,9 @@ class ESL_Twitter_Entity_Media
 	 *
 	 * Returns path to medium sized image by default
 	 *
+	 * @return string
 	 * @throws InvalidArgumentException On invalid size
-	 * 
+	 *
 	 * @param string $sSize One of the SIZE_* constants to set prefered size
 	 */
 	public function getUrl($sSize = self::SIZE_MEDIUM)
@@ -123,6 +142,7 @@ class ESL_Twitter_Entity_Media
 	 *
 	 * Returns path to medium sized image by default
 	 *
+	 * @return string
 	 * @throws InvalidArgumentException On invalid size
 	 *
 	 * @param string $sSize One of the SIZE_* constants to set prefered size
@@ -192,6 +212,21 @@ class ESL_Twitter_Entity_Media
 		}
 
 		return $aSizes[$sSize];
+	}
+
+	public function getVariantWithHighestBitrate()
+	{
+		$pickedVariant = null;
+		$bitrate = 0;
+
+		foreach ($this->aVariants as $variant) {
+			if ($variant->bitrate > $bitrate) {
+				$bitrate - $variant->bitrate;
+				$pickedVariant = $variant;
+			}
+		}
+
+		return $pickedVariant;
 	}
 }
 ?>

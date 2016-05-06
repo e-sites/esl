@@ -123,6 +123,12 @@ class ESL_SimpleXml
 		libxml_use_internal_errors(false);
 
 		if (!empty(static::$aErrors)) {
+			/*
+				@todo Throw usefull exception
+				$oLibXmlError = reset(static::$aErrors);
+				$sMessage = sprintf('%s in file %s:%d (column %d)', trim($oLibXmlError->message), $oLibXmlError->file, $oLibXmlError->line, $oLibXmlError->column);
+				throw new RuntimeException($sMessage, $oLibXmlError->code);
+			*/
 			// Enable use internal errors.
 			throw new RuntimeException(sprintf('%s::%s Invalid XML string', __CLASS__, __FUNCTION__));
 		}
